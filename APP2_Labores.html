@@ -500,7 +500,10 @@ function fill(id, items, fn) {
 function cargarTurnoActivo() {
   try {
     var t = localStorage.getItem(STORE + '_turno_activo');
-    return t ? JSON.parse(t) : null;
+    if (!t) return null;
+    var obj = JSON.parse(t);
+    if (obj && !Array.isArray(obj.actividades)) obj.actividades = [];
+    return obj;
   } catch(e) { return null; }
 }
 
