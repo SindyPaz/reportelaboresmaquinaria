@@ -759,7 +759,7 @@ function eliminarActividad(idx) {
 function renderActividadesTurno() {
   var lista = document.getElementById('act-lista');
   var cnt2  = document.getElementById('cnt2');
-  if (!turnoActivo || !turnoActivo.actividades.length) {
+  if (!turnoActivo || !turnoActivo.actividades || !turnoActivo.actividades.length) {
     lista.innerHTML = '<div class="emp">Sin actividades aun</div>';
     if (cnt2) cnt2.textContent = '0';
     return;
