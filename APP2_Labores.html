@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -374,6 +374,26 @@ function init() {
     return;
   }
 
+  // ── Cargar listas guardadas offline (fix: unidad auto, listas actualizadas sin internet) ──
+  try {
+    var cached = localStorage.getItem('listas_cache');
+    if (cached) {
+      var cacheObj = JSON.parse(cached);
+      if (cacheObj && cacheObj.listas) {
+        var Lc = cacheObj.listas;
+        if (Lc.operadores  && Lc.operadores.length)  D.operadores  = Lc.operadores;
+        if (Lc.equipos     && Lc.equipos.length)     D.equipos     = Lc.equipos;
+        if (Lc.labores     && Lc.labores.length)     D.labores     = Lc.labores;
+        if (Lc.implementos && Lc.implementos.length) D.implementos = Lc.implementos;
+        if (Lc.lotes       && Lc.lotes.length)       D.lotes       = Lc.lotes;
+        if (Lc.lotes_por_finca) D.lotes_por_finca = Lc.lotes_por_finca;
+        if (Lc.fincas      && Lc.fincas.length)      D.fincas      = Lc.fincas;
+        if (Lc.areas       && Lc.areas.length)       D.areas       = Lc.areas;
+        if (Lc.unidades    && Lc.unidades.length)    D.unidades    = Lc.unidades;
+      }
+    }
+  } catch(e2) { /* no bloquear si hay error en cache */ }
+
   var ahora = new Date(); ahora.setSeconds(0,0);
   var pad = function(n){ return n < 10 ? '0'+n : n; };
   var fechaLocal = ahora.getFullYear() + '-' + pad(ahora.getMonth()+1) + '-' + pad(ahora.getDate()) + 'T' + pad(ahora.getHours()) + ':' + pad(ahora.getMinutes());
@@ -388,6 +408,7 @@ function init() {
   fill('t-area',  D.areas);
   fill('a-labor', D.labores,      function(l){ return l.codigo + ' - ' + l.descripcion; });
   fill('a-impl',  D.implementos,  function(i){ return i.codigo + ' - ' + i.descripcion; });
+  fill('a-unidad', D.unidades);
   fill('et-op',   D.operadores, function(o){ return o.codigo + ' - ' + o.nombre; });
   fill('et-eq',   D.equipos,    function(e){ return e.codigo + (e.descripcion ? ' - ' + e.descripcion : ''); });
   fill('et-finca', D.fincas);
@@ -410,6 +431,7 @@ function init() {
     if (st) st.innerHTML = '<span style="color:#10B981">&#128246; Conexión recuperada — sincronizando...</span>';
     setTimeout(function() {
       syncData();
+      cargarListasServidor();
       setTimeout(function() {
         if (st) st.innerHTML = '<span style="color:#10B981">&#128246; En linea</span>';
       }, 3000);
@@ -427,8 +449,10 @@ function init() {
 }
 
 function cargarListasServidor() {
-  fetch(API + '?action=getListas', { method: 'GET', cache: 'no-cache' })
-    .then(function(r){ return r.json(); })
+  var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var tid  = ctrl ? setTimeout(function(){ ctrl.abort(); }, 10000) : null;
+  fetch(API + '?action=getListas', { method: 'GET', cache: 'no-cache', signal: ctrl ? ctrl.signal : undefined })
+    .then(function(r){ if (tid) clearTimeout(tid); return r.json(); })
     .then(function(d){
       if (!d.ok || !d.listas) return;
       var L = d.listas;
@@ -449,6 +473,7 @@ function cargarListasServidor() {
       fill('t-area',  D.areas);
       fill('a-labor', D.labores,     function(l){ return l.codigo + ' - ' + l.descripcion; });
       fill('a-impl',  D.implementos, function(i){ return i.codigo + ' - ' + i.descripcion; });
+      fill('a-unidad', D.unidades);
       fill('et-op',   D.operadores, function(o){ return o.codigo + ' - ' + o.nombre; });
       fill('et-eq',   D.equipos,    function(e){ return e.codigo + (e.descripcion ? ' - ' + e.descripcion : ''); });
       fill('et-finca', D.fincas);
@@ -456,7 +481,7 @@ function cargarListasServidor() {
       // Guardar en cache para uso offline
       try { localStorage.setItem('listas_cache', JSON.stringify({ts: Date.now(), listas: L})); } catch(e) {}
     })
-    .catch(function(){ /* silencioso - usamos listas embebidas */ });
+    .catch(function(){ if (tid) clearTimeout(tid); /* silencioso - usamos listas embebidas/cache */ });
 }
 
 function fill(id, items, fn) {
