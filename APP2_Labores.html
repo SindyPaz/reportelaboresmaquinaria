@@ -141,6 +141,19 @@ textarea{resize:vertical;min-height:70px}
       <option value="Fruta adelantada">Fruta adelantada</option>
     </select>
   </div>
+  <div class="fg" id="fg-motivo-desp" style="display:none">
+    <label>Motivo de Desplazamiento *</label>
+    <select id="a-motivo-desp">
+      <option value="">Seleccionar motivo...</option>
+      <option value="Hacia el centro de mezclas">Hacia el centro de mezclas</option>
+      <option value="Cambio de turno">Cambio de turno</option>
+      <option value="Hacia área de tanqueo">Hacia área de tanqueo</option>
+      <option value="Hacia taller">Hacia taller</option>
+      <option value="Entre lotes">Entre lotes</option>
+      <option value="Desde sede al campo">Desde sede al campo</option>
+      <option value="Desde el campo a la sede">Desde el campo a la sede</option>
+    </select>
+  </div>
   <div class="fg" id="fg-implemento"><label id="lbl-implemento">Implemento</label>
     <div class="ss-trig" id="a-impl-trig" onclick="abrirImplemento()"><span id="a-impl-trig-txt" style="color:#4B7A5C">Sin implemento...</span><span>&#9660;</span></div>
     <select id="a-impl" style="display:none"><option value="">Sin implemento...</option></select></div>
@@ -356,6 +369,12 @@ function selectSSItem(item) {
     var selCosecha = document.getElementById('a-tipo-cosecha');
     if (fgCosecha) fgCosecha.style.display = esCosecha ? 'block' : 'none';
     if (selCosecha && !esCosecha) selCosecha.value = '';
+    // Mostrar/ocultar campo Motivo de Desplazamiento (labor 523)
+    var esDesp = labor && labor.codigo === '523';
+    var fgDesp = document.getElementById('fg-motivo-desp');
+    var selDesp = document.getElementById('a-motivo-desp');
+    if (fgDesp) fgDesp.style.display = esDesp ? 'block' : 'none';
+    if (selDesp && !esDesp) selDesp.value = '';
   }
   closeSS();
 }
@@ -598,6 +617,8 @@ function agregarActividad() {
   var laborActual = D.labores.find(function(l){ return l.codigo === ls.value; });
   var esCosechaLabor = laborActual && laborActual.area && laborActual.area.toLowerCase() === 'cosecha';
   var tipoCosechaV = document.getElementById('a-tipo-cosecha').value;
+  var esDespLabor = laborActual && laborActual.codigo === '523';
+  var motivoDespV = document.getElementById('a-motivo-desp').value;
 
   var errores = [];
   marcarError('a-hora',      !!ho);       if (!ho)       errores.push('Hora Inicio');
@@ -612,6 +633,9 @@ function agregarActividad() {
   }
   if (esCosechaLabor) {
     marcarError('a-tipo-cosecha', !!tipoCosechaV); if (!tipoCosechaV) errores.push('Tipo de Cosecha');
+  }
+  if (esDespLabor) {
+    marcarError('a-motivo-desp', !!motivoDespV); if (!motivoDespV) errores.push('Motivo de Desplazamiento');
   }
 
   if (errores.length > 0) {
@@ -648,6 +672,7 @@ function agregarActividad() {
     hora:           ho,
     labor:          ls.value,
     tipo_cosecha:   tipoCosechaV || '',
+    motivo_desp:    motivoDespV  || '',
     labor_desc:     laborObj.descripcion || ls.value,
     clasificacion:  laborObj.clasificacion  || '',
     distribucion:   laborObj.distribucion   || '',
@@ -686,6 +711,8 @@ function agregarActividad() {
   document.getElementById('a-unidad').value = '';
   document.getElementById('a-tipo-cosecha').value = '';
   document.getElementById('fg-tipo-cosecha').style.display = 'none';
+  document.getElementById('a-motivo-desp').value = '';
+  document.getElementById('fg-motivo-desp').style.display = 'none';
   document.getElementById('a-cant').value = '';
   document.getElementById('a-obs').value  = '';
   // Reset triggers
@@ -730,6 +757,23 @@ function editarActividad(idx) {
 
   var us = document.getElementById('a-unidad');
   if (us && a.unidad) us.value = a.unidad;
+
+  // Restaurar campo Tipo de cosecha al editar
+  var fgCosEditar = document.getElementById('fg-tipo-cosecha');
+  var selCosEditar = document.getElementById('a-tipo-cosecha');
+  if (fgCosEditar && selCosEditar) {
+    var esCosEditar = a.tipo_cosecha ? true : false;
+    fgCosEditar.style.display = esCosEditar ? 'block' : 'none';
+    selCosEditar.value = a.tipo_cosecha || '';
+  }
+  // Restaurar campo Motivo de Desplazamiento al editar
+  var fgDespEditar = document.getElementById('fg-motivo-desp');
+  var selDespEditar = document.getElementById('a-motivo-desp');
+  if (fgDespEditar && selDespEditar) {
+    var esDespEditar = a.labor === '523';
+    fgDespEditar.style.display = esDespEditar ? 'block' : 'none';
+    selDespEditar.value = a.motivo_desp || '';
+  }
 
   var fa = document.getElementById('a-finca-act');
   if (fa) fa.value = a.finca || '';
@@ -779,6 +823,7 @@ function renderActividadesTurno() {
     html += '<div style="font-size:13px;color:#F1F5F9;font-weight:600;margin-bottom:3px">' + a.labor_desc + '</div>';
     html += '<div style="font-size:11px;color:#6EE7B7">&#128336; ' + (a.hora || '-') + '</div>';
     if (a.lote) html += '<div style="font-size:11px;color:#94A3B8">Lote: ' + a.lote + '</div>';
+    if (a.motivo_desp) html += '<div style="font-size:11px;color:#FCD34D">&#128663; ' + a.motivo_desp + '</div>';
     if (a.implemento) html += '<div style="font-size:11px;color:#94A3B8">Impl: ' + a.impl_desc + '</div>';
     if (a.cantidad) html += '<div style="font-size:11px;color:#94A3B8">Cant: ' + a.cantidad + (a.unidad ? ' ' + a.unidad : '') + '</div>';
     if (a.obs) html += '<div style="font-size:11px;color:#64748B;font-style:italic">' + a.obs + '</div>';
